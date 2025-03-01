@@ -1,0 +1,6 @@
+sudo apt sratoolkit
+prefetch SRR15693854
+fastq-dump --split-files SRR15693854.sra
+gzip SRR15693854_1.fastq
+gzip SRR15693854_2.fastq
+
