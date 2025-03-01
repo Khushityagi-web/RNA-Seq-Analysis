@@ -4,3 +4,5 @@ fastq-dump --split-files SRR15693854.sra
 gzip SRR15693854_1.fastq
 gzip SRR15693854_2.fastq
 sudo apt -y install fastqc
+fastqc SRR15693854_1.fastq.gz
+fastqc SRR15693854_2.fastq.gz
