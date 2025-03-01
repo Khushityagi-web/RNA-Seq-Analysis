@@ -15,3 +15,7 @@ fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
       --length_required 36 \
       --dedup \
       --html fastp_report.html --json fastp_report.json
+cd trimmmed
+ls
+fastqc *.gz
+
