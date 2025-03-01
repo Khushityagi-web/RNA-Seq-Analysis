@@ -18,4 +18,7 @@ fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
 cd trimmmed
 ls
 fastqc *.gz
+sudo apt install -y rna-star
+
+
 
