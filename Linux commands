@@ -6,3 +6,12 @@ gzip SRR15693854_2.fastq
 sudo apt -y install fastqc
 fastqc SRR15693854_1.fastq.gz
 fastqc SRR15693854_2.fastq.gz
+sudo apt install fastp
+fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
+      -o trimmed/SRR15693854_1.fastq.gz -O trimmed/SRR15693854_2.fastq.gz \
+      --detect_adapter_for_pe \
+      --cut_front --cut_tail --cut_right \
+      --qualified_quality_phred 20 \
+      --length_required 36 \
+      --dedup \
+      --html fastp_report.html --json fastp_report.json
