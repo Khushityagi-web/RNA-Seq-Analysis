@@ -1,15 +1,21 @@
 # Prerequisites
-sudo apt sratoolkit (# The SRA Toolkit is used to download sequencing data from the SRA database)
-prefetch SRR15693854 (# Use prefetch to download the raw sequencing data from NCBI SRA)
-fastq-dump --split-files SRR15693854.sra (# Convert the downloaded .sra file into paired-end FASTQ files)
-gzip SRR15693854_1.fastq (# Gzip-compress the FASTQ files to reduce storage space)
+sudo apt install sratoolkit  # The SRA Toolkit is used to download sequencing data from the SRA database
+prefetch SRR15693854  # Use prefetch to download the raw sequencing data from NCBI SRA
+fastq-dump --split-files SRR15693854.sra  # Convert the downloaded .sra file into paired-end FASTQ files
+
+# Compress FASTQ files
+gzip SRR15693854_1.fastq  # Gzip-compress the FASTQ files to reduce storage space
 gzip SRR15693854_2.fastq
-sudo apt -y install fastqc (# FastQC is used to assess the quality of raw sequencing data)
-# Perform quality control checks on the raw FASTQ files:
-fastqc SRR15693854_1.fastq.gz
+
+# Install and run FastQC for quality control
+sudo apt -y install fastqc  # FastQC is used to assess the quality of raw sequencing data
+fastqc SRR15693854_1.fastq.gz  # Perform quality control checks on raw FASTQ files
 fastqc SRR15693854_2.fastq.gz
-sudo apt install fastp (# Fastp is used for adapter trimming and quality filtering) 
-# Trim reads for adapter sequences, low-quality bases, and duplicates:
+
+# Install Fastp for adapter trimming and quality filtering
+sudo apt install fastp  # Fastp is used for adapter trimming and quality filtering
+
+# Trim reads for adapter sequences, low-quality bases, and duplicates
 fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
       -o trimmed/SRR15693854_1.fastq.gz -O trimmed/SRR15693854_2.fastq.gz \
       --detect_adapter_for_pe \
@@ -18,11 +24,15 @@ fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
       --length_required 36 \
       --dedup \
       --html fastp_report.html --json fastp_report.json
-# Check the quality of trimmed reads:
-cd trimmmed
+
+# Check the quality of trimmed reads
+cd trimmed
 ls
 fastqc *.gz
-sudo apt install -y rna-star (# STAR is used for mapping RNA-Seq reads to the reference genome)
+
+# Install STAR aligner
+sudo apt install -y rna-star  # STAR is used for mapping RNA-Seq reads to the reference genome
+
 # Create the genome index required for alignment using the reference genome and annotation file
 STAR --runThreadN 1 \
      --runMode genomeGenerate \
@@ -31,6 +41,7 @@ STAR --runThreadN 1 \
      --sjdbGTFfile gencode.v47.chr_patch_hapl_scaff.annotation.gtf \
      --sjdbOverhang 100 \
      --genomeSAsparseD 3
+
 
 
 
