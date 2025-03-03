@@ -34,13 +34,12 @@ fastqc *.gz
 sudo apt install -y rna-star  # STAR is used for mapping RNA-Seq reads to the reference genome
 
 # Create the genome index required for alignment using the reference genome and annotation file
-STAR --runThreadN 1 \
+STAR --runThreadN 8 \
      --runMode genomeGenerate \
      --genomeDir GenomeIndex/ \
      --genomeFastaFiles GRCh38.primary_assembly.genome.fa \
      --sjdbGTFfile gencode.v47.chr_patch_hapl_scaff.annotation.gtf \
-     --sjdbOverhang 100 \
-     --genomeSAsparseD 3
+     --sjdbOverhang 100
 
 
 
