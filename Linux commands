@@ -77,6 +77,24 @@ chmod +x star_alignment.sh
 # Run the STAR alignment script
 bash star_alignment.sh
 
+# Use featureCounts from the Subread package to count reads:
+featureCounts -T 8 \
+  -a gencode.v47.chr_patch_hapl_scaff.annotation.gtf \
+  -o star_output/gene_counts.txt \
+  -t exon \
+  -g gene_id \
+  -p \
+  -B \
+  -C \
+  star_output/sorted_mapped.bam
+
+# Cleaned FeatureCounts.txt by removing extra header and keeping only Gene ID and expression values
+tail -n +2 FeatureCounts.txt | cut -f1,2- > FeatureCounts_Mod.txt
+head FeatureCounts_Mod.txt
+
+
+
+
 
 
 
