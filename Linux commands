@@ -41,6 +41,33 @@ STAR --runThreadN 8 \
      --sjdbGTFfile gencode.v47.chr_patch_hapl_scaff.annotation.gtf \
      --sjdbOverhang 100
 
+#!/bin/bash
+
+# Define input files
+READ1="SRR15693854_1.fastq.gz"
+READ2="SRR15693854_2.fastq.gz"
+
+# Define paths
+GENOME_INDEX="GenomeIndex"  # Corrected STAR genome index directory
+OUTPUT_DIR="star_output"
+THREADS=8  # Adjust based on your system
+
+# Create output directory if it doesn't exist
+mkdir -p ${OUTPUT_DIR}
+
+# Run STAR alignment
+STAR --runThreadN ${THREADS} \
+     --genomeDir ${GENOME_INDEX} \
+     --readFilesIn ${READ1} ${READ2} \
+     --readFilesCommand gunzip -c \
+     --outFileNamePrefix ${OUTPUT_DIR}/ \
+     --outSAMtype BAM SortedByCoordinate \
+     --quantMode GeneCounts
+
+# Print completion message
+echo "STAR alignment completed. Results saved in ${OUTPUT_DIR}/"
+
+
 
 
 
