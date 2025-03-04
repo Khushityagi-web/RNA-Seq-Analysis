@@ -1,21 +1,26 @@
-# Prerequisites
-sudo apt install sratoolkit  # The SRA Toolkit is used to download sequencing data from the SRA database
-prefetch SRR15693854  # Use prefetch to download the raw sequencing data from NCBI SRA
-fastq-dump --split-files SRR15693854.sra  # Convert the downloaded .sra file into paired-end FASTQ files
+#!/bin/bash
+
+# Install required tools
+sudo apt update
+sudo apt install -y sratoolkit fastqc fastp rna-star
+
+# Download raw sequencing data from SRA
+prefetch SRR15693854
+
+# Convert SRA to FASTQ (Paired-End)
+fastq-dump --split-files SRR15693854/SRR15693854.sra
 
 # Compress FASTQ files
-gzip SRR15693854_1.fastq  # Gzip-compress the FASTQ files to reduce storage space
+gzip SRR15693854_1.fastq
 gzip SRR15693854_2.fastq
 
-# Install and run FastQC for quality control
-sudo apt -y install fastqc  # FastQC is used to assess the quality of raw sequencing data
-fastqc SRR15693854_1.fastq.gz  # Perform quality control checks on raw FASTQ files
-fastqc SRR15693854_2.fastq.gz
+# Perform quality control using FastQC
+fastqc SRR15693854_1.fastq.gz SRR15693854_2.fastq.gz
 
-# Install Fastp for adapter trimming and quality filtering
-sudo apt install fastp  # Fastp is used for adapter trimming and quality filtering
+# Create a directory for trimmed reads
+mkdir -p trimmed
 
-# Trim reads for adapter sequences, low-quality bases, and duplicates
+# Perform trimming using Fastp
 fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
       -o trimmed/SRR15693854_1.fastq.gz -O trimmed/SRR15693854_2.fastq.gz \
       --detect_adapter_for_pe \
@@ -25,47 +30,53 @@ fastp -i SRR15693854_1.fastq.gz -I SRR15693854_2.fastq.gz \
       --dedup \
       --html fastp_report.html --json fastp_report.json
 
-# Check the quality of trimmed reads
-cd trimmed
-ls
-fastqc *.gz
+# Perform quality check on trimmed reads
+fastqc trimmed/*.gz
 
-# Install STAR aligner
-sudo apt install -y rna-star  # STAR is used for mapping RNA-Seq reads to the reference genome
-
-# Create the genome index required for alignment using the reference genome and annotation file
+# Create STAR genome index (Run only once if not already indexed)
+mkdir -p GenomeIndex
 STAR --runThreadN 8 \
      --runMode genomeGenerate \
-     --genomeDir GenomeIndex/ \
+     --genomeDir GenomeIndex \
      --genomeFastaFiles GRCh38.primary_assembly.genome.fa \
      --sjdbGTFfile gencode.v47.chr_patch_hapl_scaff.annotation.gtf \
-     --sjdbOverhang 100
+     --sjdbOverhang 99  # Adjust based on read length - 1
 
+# Create STAR alignment script
+cat <<EOF > star_alignment.sh
 #!/bin/bash
 
 # Define input files
-READ1="SRR15693854_1.fastq.gz"
-READ2="SRR15693854_2.fastq.gz"
+READ1="trimmed/SRR15693854_1.fastq.gz"
+READ2="trimmed/SRR15693854_2.fastq.gz"
 
 # Define paths
-GENOME_INDEX="GenomeIndex"  # STAR genome index directory
+GENOME_INDEX="GenomeIndex"
 OUTPUT_DIR="star_output"
-THREADS=8  
+THREADS=8
 
 # Create output directory if it doesn't exist
-mkdir -p ${OUTPUT_DIR}
+mkdir -p \${OUTPUT_DIR}
 
 # Run STAR alignment
-STAR --runThreadN ${THREADS} \
-     --genomeDir ${GENOME_INDEX} \
-     --readFilesIn ${READ1} ${READ2} \
+STAR --runThreadN \${THREADS} \
+     --genomeDir \${GENOME_INDEX} \
+     --readFilesIn \${READ1} \${READ2} \
      --readFilesCommand gunzip -c \
-     --outFileNamePrefix ${OUTPUT_DIR}/ \
+     --outFileNamePrefix \${OUTPUT_DIR}/ \
      --outSAMtype BAM SortedByCoordinate \
      --quantMode GeneCounts
 
 # Print completion message
-echo "STAR alignment completed. Results saved in ${OUTPUT_DIR}/"
+echo "STAR alignment completed. Results saved in \${OUTPUT_DIR}/"
+EOF
+
+# Make script executable
+chmod +x star_alignment.sh
+
+# Run the STAR alignment script
+bash star_alignment.sh
+
 
 
 
