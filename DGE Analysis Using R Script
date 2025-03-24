@@ -1,8 +1,37 @@
-# Install if not already installed
-if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
-BiocManager::install("DESeq2")
+# Count matrix 
+# Load required library
+library(dplyr)
+# Set the path to the folder containing the count files
+path <- "C:/Users/Downloads/Bootcamp 2.0/GSE291033_RAW/GSM8827861"
+# List all count files
+count_files <- list.files(path, pattern = "*_counts.txt", full.names = TRUE)
+# Initialize an empty list to store count data
+count_list <- list()
+# Read and combine count files
+for (file in count_files) {
+  # Extract sample name from the file name
+  sample_name <- gsub("_counts.txt", "", basename(file)
+# Read the count file
+  counts <- read.table(file, header = FALSE, row.names = 1)
+ # Rename the column with the sample name
+  colnames(counts) <- sample_name
+# Add the counts to the list
+  count_list[[sample_name]] <- counts
+}
+# Merge all counts into a single matrix
+count_matrix <- do.call(cbind, count_list)
+# Save the count matrix to a file
+write.csv(count_matrix, file = "count_matrix.csv", row.names = TRUE)
 
-# Load libraries
+# Differential Gene Expression (DGE) analysis in R.
+install.packages("BiocManager")  # Install BiocManager if not already installed
+BiocManager::install("DESeq2")   # Install DESeq2
+BiocManager::install("pheatmap") # For heatmap visualization
+BiocManager::install("ggplot2")  # For data visualization
+BiocManager::install("dplyr")    # For data manipulation
+# Load The Packages
 library(DESeq2)
-
-
+library(pheatmap)
+library(ggplot2)
+library(dplyr)
+# 
