@@ -34,4 +34,84 @@ library(DESeq2)
 library(pheatmap)
 library(ggplot2)
 library(dplyr)
-# 
+# Load the data 
+count_data <- read.csv("count_matrix.csv", row.names = 1)
+metadata <- read.csv("metadata.csv", row.names = 1)
+# Verify data
+head(count_data)  # Should show genes (rows) vs samples (columns)
+head(metadata)    # Should show sample IDs (rows) and conditions (columns)
+# Ensure sample names match between count matrix and metadata
+stopifnot(all(colnames(count_data) == rownames(metadata)))
+
+# Simplifying the count matrix column names to match the metadata.
+# Clean Up Column Names
+# Remove everything after the GSM ID (keep text before first underscore)
+colnames(count_data) <- sub("_.*", "", colnames(count_data))
+colnames(count_data)  # Should now match rownames(metadata)
+all(colnames(count_data) == rownames(metadata))  # Should return TRUE
+# Create DESeq2 object
+dds <- DESeqDataSetFromMatrix(
+  countData = count_data,
+  colData = metadata,
+  design = ~ Treatment  # Adjust based on your metadata column (e.g., ~ Condition)
+)
+# Perform DGE analysis
+dds <- DESeq(dds)
+
+# Extract results (replace with your comparison of interest)
+results <- results(dds, contrast = c("Treatment", "siRNA against p53", "negative control siRNA"))
+
+# View summary
+summary(results)
+# Filter for significant genes (padj < 0.05 & |log2FC| > 1)
+sig_genes <- results %>% 
+  as.data.frame() %>% 
+  filter(padj < 0.05 & abs(log2FoldChange) > 1)
+
+# Save to CSV
+write.csv(sig_genes, "significant_genes.csv")
+ggplot(as.data.frame(results), aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = ifelse(padj < 0.05 & abs(log2FoldChange) > 1, "red", "black"))) +
+  theme_minimal() +
+  labs(title = "Volcano Plot", x = "Log2 Fold Change", y = "-Log10(Adjusted p-value)")
+# Normalize counts (for visualization)
+vsd <- vst(dds, blind = FALSE)
+
+# Extract top 50 DEGs
+top_genes <- rownames(sig_genes)[1:50]
+heatmap_data <- assay(vsd)[top_genes, ]
+
+# Plot heatmap
+pheatmap(heatmap_data, 
+         scale = "row", 
+         clustering_distance_rows = "euclidean",
+         show_rownames = FALSE)
+# Remove version numbers after dot (.)
+ens_ids <- gsub("\\..*", "", rownames(sig_genes))
+head(ens_ids)
+library(org.Hs.eg.db)
+
+entrez_ids <- mapIds(org.Hs.eg.db, 
+                     keys = ens_ids, 
+                     keytype = "ENSEMBL", 
+                     column = "ENTREZID", 
+                     multiVals = "first")
+
+# Check
+head(entrez_ids)
+entrez_ids_clean <- na.omit(entrez_ids)
+length(entrez_ids_clean)
+library(clusterProfiler)
+
+go_results <- enrichGO(gene = entrez_ids_clean, 
+                       OrgDb = org.Hs.eg.db, 
+                       ont = "BP", 
+                       pvalueCutoff = 0.05)
+
+# Check results
+go_results
+library(enrichplot)
+dotplot(go_results)
+
+
+
