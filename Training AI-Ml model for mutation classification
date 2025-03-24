@@ -1,1 +1,97 @@
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import VarianceThreshold
+# 1. Load and transpose
+count_matrix = pd.read_csv('count_matrix.csv', index_col=0)
+X = count_matrix.T
+# 2. Initial cleaning
+X_clean = X.replace([np.inf, -np.inf], np.nan).dropna(axis=1)
+# 3. Remove low-variance features (more aggressive than zero-variance)
+selector = VarianceThreshold(threshold=0.1)  # Keeps features with variance > 0.1
+X_highvar = selector.fit_transform(X_clean)
+# 4. Keep only top 5,000 most variable genes (for 12 samples)
+variances = np.var(X_highvar, axis=0)
+top_genes_idx = np.argsort(variances)[-5000:]  # Indices of top genes
+X_final = X_highvar[:, top_genes_idx]
+
+print("Final shape:", X_final.shape) 
+# Assuming you have mutation labels for 12 samples
+labels = pd.DataFrame({
+    'Sample_ID': count_matrix.columns.tolist(),  # From count_matrix
+    'TP53_Status': [1,1,1,1,1,1,0,0,0,0,0,0]  # 6 mutant, 6 wild-type (adjust as needed)
+})
+y = labels.set_index('Sample_ID').loc[X_clean.index]  # Align with samples
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+    X_final, y, test_size=0.25, stratify=y, random_state=42
+)
+print(f"Train: {X_train.shape}, Test: {X_test.shape}")
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.ensemble import RandomForestClassifier
+
+# Pipeline: Feature selection → classifier
+pipe = make_pipeline(
+    SelectKBest(f_classif, k=1000),  # Select top 1,000 informative genes
+    RandomForestClassifier(n_estimators=500, class_weight='balanced')
+)
+
+pipe.fit(X_train, y_train.values.ravel())
+from sklearn.metrics import classification_report
+y_pred = pipe.predict(X_test)
+print(classification_report(y_test, y_pred))
+# Get selected gene indices
+selected_idx = pipe.named_steps['selectkbest'].get_support()
+selected_genes = X_clean.columns[top_genes_idx][selected_idx]  # Gene names
+
+# Use these genes for enrichment analysis (see Step 5 instructions)
+print("Selected genes for pathways:", selected_genes[:10])  # Preview
+# Feature importance
+importances = pipe.named_steps['randomforestclassifier'].feature_importances_
+pd.DataFrame({'Gene': selected_genes, 'Importance': importances}).sort_values('Importance', ascending=False)
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+pca = PCA(n_components=2).fit_transform(X_final)
+plt.scatter(pca[:,0], pca[:,1], c=y['TP53_Status'])
+plt.show()
+from sklearn.metrics import roc_auc_score, roc_curve
+
+# Get predicted probabilities (not just class predictions)
+y_probs = pipe.predict_proba(X_test)[:, 1]  # Probabilities for class 1 (mutant)
+
+# Calculate AUC-ROC
+auc = roc_auc_score(y_test, y_probs)
+print(f"AUC-ROC: {auc:.3f}")
+
+# Plot ROC curve
+fpr, tpr, _ = roc_curve(y_test, y_probs)
+plt.figure()
+plt.plot(fpr, tpr, label=f"AUC = {auc:.2f}")
+plt.plot([0, 1], [0, 1], 'k--')  # Diagonal line
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.show()
+from sklearn.decomposition import PCA
+
+# Reduce to 2D for visualization
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_final)
+
+# Plot
+plt.scatter(
+    X_pca[:, 0], X_pca[:, 1],
+    c=y['TP53_Status'], cmap='coolwarm', alpha=0.7
+)
+plt.colorbar(label='TP53 Status (0=Wild-type, 1=Mutant)')
+plt.xlabel('PCA Component 1')
+plt.ylabel('PCA Component 2')
+plt.title('Sample Clustering by TP53 Status')
+plt.show()
+
+
+
+
+
 
